@@ -131,34 +131,40 @@ CREATE PROC GetBillId(@CardId int)
 AS
 	BEGIN
 		--DBCC CHECKIDENT(BillDetail, RESEED, 1)
-		SELECT CAST(@CardId AS VARCHAR(10)) + CAST(DatePart(Hour, GetDate()) AS varchar(10)) + CAST(DatePart(Minute, GetDate()) AS varchar(10)) + CAST(DatePart(SECOND, GetDate()) AS varchar(10))
+		SELECT CAST(@CardId AS VARCHAR(10)) + CAST(DatePart(Hour, GetDate()) AS varchar(10)) + CAST(DatePart(Minute, GetDate()) AS varchar(10)) + CAST(DatePart(SECOND, GetDate()) AS varchar(10)) + CAST(DatePart(Day, GetDate()) AS varchar(10)) + CAST(DatePart(Month, GetDate()) AS varchar(10))
 	END	
+GO
 
-CREATE PROC GetBillDetailId(@BillId int)
+CREATE PROC GetBillDetailId(@BillId varchar(10))
 AS
 	BEGIN
 		--DBCC CHECKIDENT(BillDetail, RESEED, 1)
 		SELECT @BillId + CAST(DatePart(Minute, GetDate()) AS varchar(10)) + CAST(DatePart(SECOND, GetDate()) AS varchar(10))
 	END	
+GO
+--DROP PROC GetBillDetailId
 --DROP PROC GetBillId
 --DBCC CHECKIDENT(OrderCard, RESEED, 0)
 --InsertBill 1
+--EXEC GetBillDetailId '310646'
 
 CREATE PROC GetCurrentDate
 AS
 	BEGIN
 		SELECT GETDATE()
 	END
+GO
 
-CREATE PROC GetLatestBillId
+CREATE PROC GetLatestBillId 
 AS
 	BEGIN
 		SELECT TOP 1 *
 		FROM Bill
 		ORDER BY BillDate DESC
 	END
+GO
 
-SET IDENTITY_INSERT BillDetail Off
+--SET IDENTITY_INSERT BillDetail Off
 
 CREATE PROC InsertBillDetail(@BillId varchar(10), @DrinkId varchar(10), @Number int, @Size varchar(10), @Topping varchar(250), @Ice varchar(10), @Sugar varchar(10), @BillDetailPrice int)
 AS
@@ -173,7 +179,7 @@ AS
 		INSERT INTO BillDetail(BillDetailPrice) VALUES(@BillDetailPrice)
 	END
 --INSERT INTO BillDetail VALUES('2185853', 'TRADIT', 1, N'S (Nhỏ)', N'Trân châu vàng', '50%', '50%', 25000)
-
+GO
 CREATE PROC GetBillDetailByLatestBillId
 AS
 	BEGIN
@@ -181,16 +187,18 @@ AS
 		FROM BillDetail 
 		WHERE BillId=(SELECT TOP 1 BillId FROM Bill ORDER BY BillDate DESC)
 	END
-
+GO
 
 CREATE TRIGGER tr_UpdateBill 
 ON BillDetail
 	FOR INSERT
 		AS
 			BEGIN
-				UPDATE Bill SET TotalPrice+=BillDetail.BillDetailPrice
-				FROM inserted, BillDetail
+				UPDATE Bill SET TotalPrice+=inserted.BillDetailPrice
+				FROM inserted
+				WHERE inserted.BillId=Bill.BillId
 			END
+GO
 --DROP TRIGGER tr_UpdateBill
 --INSERT INTO BillDetail VALUES('2185853', 'TRADIT', 1, N'S (Nhỏ)', N'Trân châu vàng', '50%', '50%', 25000)
 
@@ -198,3 +206,6 @@ ON BillDetail
 --INSERT INTO BillDetail VALUES('10212350', 'TRADIT', 1, N'S (Nhỏ)', N'Trân châu vàng', '50%', '50%', 25000)
 
 --DBCC CHECKIDENT(BillDetail, RESEED, 0)
+
+INSERT INTO BillDetail VALUES('1104822385', '1104822312', 'TRADIT', 1, N'S (Nhỏ)', N'Trân châu vàng', '50%', '50%', 25000)
+
