@@ -1,211 +1,165 @@
+CREATE DATABASE MilkTeaShop 
+GO
+
 USE MilkTeaShop
 GO
+---------------------------
+--MilkTea
+-- Menu 
+-- TableOfGuest
+--Bill
+--DetailBill
+--Acount
+--Ingredient 
+----------------------------
 
-CREATE PROC USP_GetAccountByUserName	
-@username NVARCHAR(50)
-AS
-BEGIN
-	SELECT* FROM dbo.Account WHERE @username=UserName
-END
+
+CREATE TABLE OrderCard
+(
+	CardId INT PRIMARY KEY,
+	CardName nvarchar(50) not null,
+	CardStatus INT NOT NULL DEFAULT 0 --0 Trống || 1 Có người 
+)
 GO
 
---EXEC dbo.USP_GetAccountByUserName @username = N'kminh' -- nvarchar(50)
---GO
 
-CREATE PROC USP_GetAccount	
-AS
-BEGIN
-	SELECT* FROM dbo.Account 
-END
-GO
- 
---EXEC dbo.USP_GetAccount
---GO
-
-CREATE PROC USP_Login	
-@userName NVARCHAR(100),@passWord NVARCHAR(100), @position NVARCHAR(100)
-AS
-BEGIN
-	SELECT* FROM dbo.Account WHERE  @userName=UserName AND @passWord=PassWord  AND @position=Position
-END
+CREATE TABLE Category
+(
+	CategoryId varchar(10) PRIMARY KEY not null,
+	CategoryName NVARCHAR (100) NOT NULL
+)
 GO
 
-CREATE PROC USP_GetCardList
-AS
-BEGIN
-	SELECT* FROM dbo.OrderCard
-END
+CREATE TABLE Bill
+(
+	BillId varchar(20) PRIMARY KEY,
+	CardId  INT constraint FK_TK_Card FOREIGN KEY (CardId ) REFERENCES OrderCard (CardId) NOT NULL,
+	BillDate datetime DEFAULT GETDATE(),
+	--BillStatus INT NOT NULL DEFAULT 0, --1:đã thanh toán ,--0:chưa thanh toán,
+	TotalPrice int DEFAULT 0,
+)
 GO
 
---EXECUTE dbo.USP_GetCardList
 
---SET IDENTITY_INSERT OrderCard ON
-
-CREATE PROC CardUpdate(@i int)
-AS
-	BEGIN
-		--DBCC CHECKIDENT(OrderCard, RESEED, 0)
-		INSERT dbo.OrderCard VALUES (@i, N'Thẻ số '+CAST(@i AS NVARCHAR(44)), 0)
-		SELECT* FROM dbo.OrderCard
-	END
-GO
---DROP PROC CardUpdate
-
---EXEC CardUpdate 31
-
-CREATE PROC CardRemove(@i int)
-AS
-	BEGIN
-		--DBCC CHECKIDENT(OrderCard, RESEED, 0)
-		DELETE dbo.OrderCard WHERE CardId=@i
-		SELECT* FROM dbo.OrderCard
-	END
+CREATE TABLE Drink
+(
+	DrinkId varchar(10) PRIMARY KEY not null,
+	CategoryId  varchar(10) constraint FK_TK_Menu FOREIGN KEY (CategoryId) REFERENCES  Category(CategoryId) not null,
+	DrinkName NVARCHAR(50) NOT NULL DEFAULT N'Trà sữa truyền thống',
+	Price int NOT NULL DEFAULT 0
+)
 GO
 
---UPDATE dbo.CardUpdate SET CardStatus = N'Đã có người' WHERE CardId =9
-
-
-CREATE PROC USP_GetPos(@Username nvarchar(100), @pass nvarchar(100))
-AS
-	BEGIN
-		SELECT position
-		FROM dbo.Account
-		WHERE Username=@Username AND PassWord=@pass
-	END
-GO
---EXEC USP_GetPos N'hminh', N'minhdesigner' 
-
---EXEC USP_GetPos N'kminh', N'1701yeu2409' 
-
-CREATE PROC CheckAccount(@Username nvarchar(100), @pass nvarchar(100))
-AS
-	BEGIN
-		DECLARE @Bool nvarchar(10)
-		SET @Bool=(SELECT COUNT(*) FROM dbo.Account WHERE @Username = Username AND @pass = PassWord)
-		IF(@Bool=1)
-			SELECT N'true'
-		IF(@Bool=0)
-			SELECT N'false'
-	END
-GO
---DROP PROC CheckAccount
---EXEC CheckAccount N'hminh', 'minhdesigner'
---EXEC CheckAccount N'hminh1', 'minhdesigner1'
-
-
-CREATE PROC SelectCategoryNumber(@CategoryId nvarchar(10))
-AS
-	BEGIN
-		SELECT COUNT(*) FROM Category WHERE (CategoryId = @CategoryId)
-	END
-GO
---EXEC SelectCategoryNumber N'N0'
-
-CREATE PROC SelectAllCategoryId
-AS
-	BEGIN
-		SELECT CategoryId FROM Category
-	END
---EXEC SelectAllCategoryId
+CREATE TABLE BillDetail
+(
+	BillDetailId varchar(20) PRIMARY KEY,
+	BillId  varchar(20) constraint FK_TK_Bill FOREIGN KEY (BillId) REFERENCES Bill (BillId) not null,
+	DrinkId varchar(10) constraint FK_TK_Drink FOREIGN KEY (DrinkId) REFERENCES Drink (DrinkId) not null,
+	Number INT NOT NULL DEFAULT 0,
+	Size NVARCHAR(10) NOT NULL,
+	Topping NVARCHAR(250) NOT NULL,
+	Ice VARCHAR(10) NOT NULL,
+	SUGAR VARCHAR(10) NOT NULL,
+	BillDetailPrice int not null
+)
 GO
 
-CREATE PROC SelectCategoryName(@Cid varchar(10))
-AS
-	BEGIN
-		SELECT CategoryName FROM Category WHERE CategoryId=@Cid
-	END
---EXEC SelectCategoryName 'ORG'
+
+CREATE TABLE Ingredient
+(
+	IngredientID varchar(10) PRIMARY KEY not null,
+	IngredientName NVARCHAR(100) NOT NULL,
+	IngredientPrice bigint not null, 
+	ProducedDate DATE NOT NULL DEFAULT GETDATE(),
+	ExpiryDate DATE NOT NULL DEFAULT GETDATE()
+)
 GO
 
-/*CREATE PROC InsertBill(@CardId int)
-AS
-	BEGIN
-		INSERT dbo.Bill VALUES (CAST(@CardId AS VARCHAR(10)) + CAST(DatePart(Hour, GetDate()) AS varchar(10)) + CAST(DatePart(Minute, GetDate()) AS varchar(10)) + CAST(DatePart(SECOND, GetDate()) AS varchar(10)), 
-		@CardId, getDate(), 0, 0)
-		
-		SELECT* FROM dbo.Bill
-	END	
-GO*/
+CREATE TABLE Supplies
+(
+	DrinkId varchar(10) CONSTRAINT FK_PK_DrinkLink  FOREIGN KEY(DrinkId) REFERENCES Drink (DrinkId) not null,
+	IngredientID varchar(10)  CONSTRAINT FK_PK_IngredientLink FOREIGN KEY(IngredientId) REFERENCES Ingredient (IngredientId) not null,
+	Primary Key(DrinkId, IngredientId)
+)
 
-CREATE PROC GetBillId(@CardId int)
-AS
-	BEGIN
-		--DBCC CHECKIDENT(BillDetail, RESEED, 1)
-		SELECT CAST(@CardId AS VARCHAR(10)) + CAST(DatePart(Hour, GetDate()) AS varchar(10)) + CAST(DatePart(Minute, GetDate()) AS varchar(10)) + CAST(DatePart(SECOND, GetDate()) AS varchar(10)) + CAST(DatePart(Day, GetDate()) AS varchar(10)) + CAST(DatePart(Month, GetDate()) AS varchar(10))
-	END	
+/*Topping NVARCHAR(50) NOT NULL,
+Ice INT NOT NULL,
+SUGAR INT NOT NULL*/
+
+
+
+
+
+CREATE TABLE Account
+(
+	UserName NVARCHAR(100) PRIMARY KEY,
+	DisplayName NVARCHAR(100) NOT NULL,
+	PassWord NVARCHAR(100) NOT NULL ,
+	Position NVARCHAR(100) NOT NULL ,--1:quản lý,--2:nv quản lý kho,--3:nv quản lý hóa đơn ,--4:nv quản lý menu
+)
 GO
 
-CREATE PROC GetBillDetailId(@BillId varchar(10))
-AS
-	BEGIN
-		--DBCC CHECKIDENT(BillDetail, RESEED, 1)
-		SELECT @BillId + CAST(DatePart(Minute, GetDate()) AS varchar(10)) + CAST(DatePart(SECOND, GetDate()) AS varchar(10))
-	END	
-GO
---DROP PROC GetBillDetailId
---DROP PROC GetBillId
---DBCC CHECKIDENT(OrderCard, RESEED, 0)
---InsertBill 1
---EXEC GetBillDetailId '310646'
+INSERT dbo.Account
+(
+    UserName,
+    DisplayName,
+    PassWord,
+    Position
+)
+VALUES
+(   N'kminh', -- UserName - nvarchar(100)
+    N'Khải Minh', -- DisplayName - nvarchar(100)
+    N'1701yeu2409', -- PassWord - nvarchar(100)
+    N'Quản lý'   -- Position - nvarchar(100)
+    )
 
-CREATE PROC GetCurrentDate
-AS
-	BEGIN
-		SELECT GETDATE()
-	END
-GO
+INSERT dbo.Account
+(
+    UserName,
+    DisplayName,
+    PassWord,
+    Position
+)
+VALUES
+(   N'hminh', -- UserName - nvarchar(100)
+    N'Huỳnh Minh', -- DisplayName - nvarchar(100)
+    N'minhdesigner', -- PassWord - nvarchar(100)
+    N'Quản lý Menu'   -- Position - nvarchar(100)
+    )
 
-CREATE PROC GetLatestBillId 
-AS
-	BEGIN
-		SELECT TOP 1 *
-		FROM Bill
-		ORDER BY BillDate DESC
-	END
-GO
+INSERT dbo.Account
+(
+    UserName,
+    DisplayName,
+    PassWord,
+    Position
+)
+VALUES
+(   N'luan', -- UserName - nvarchar(100)
+    N'Thành Luân', -- DisplayName - nvarchar(100)
+    N'luanmegame', -- PassWord - nvarchar(100)
+    N'Quản lý kho'   -- Position - nvarchar(100)
+    )
 
---SET IDENTITY_INSERT BillDetail Off
+INSERT dbo.Account
+(
+    UserName,
+    DisplayName,
+    PassWord,
+    Position
+)
+VALUES
+(   N'quyen', -- UserName - nvarchar(100)
+    N'Trần Quyền', -- DisplayName - nvarchar(100)
+    N'quyencothu', -- PassWord - nvarchar(100)
+    N'Nhân viên'   -- Position - nvarchar(100)
+    )
 
-CREATE PROC InsertBillDetail(@BillId varchar(10), @DrinkId varchar(10), @Number int, @Size varchar(10), @Topping varchar(250), @Ice varchar(10), @Sugar varchar(10), @BillDetailPrice int)
-AS
-	BEGIN
-		INSERT INTO BillDetail(BillId) VALUES(@BillId)
-		INSERT INTO BillDetail(DrinkId) VALUES(@DrinkId)
-		INSERT INTO BillDetail(Number) VALUES(@Number)
-		INSERT INTO BillDetail(Size) VALUES(@Size)
-		INSERT INTO BillDetail(Topping) VALUES(@Topping)
-		INSERT INTO BillDetail(Ice) VALUES(@Ice)
-		INSERT INTO BillDetail(Sugar) VALUES(@Sugar)
-		INSERT INTO BillDetail(BillDetailPrice) VALUES(@BillDetailPrice)
-	END
---INSERT INTO BillDetail VALUES('2185853', 'TRADIT', 1, N'S (Nhỏ)', N'Trân châu vàng', '50%', '50%', 25000)
-GO
-CREATE PROC GetBillDetailByLatestBillId
-AS
-	BEGIN
-		SELECT *
-		FROM BillDetail 
-		WHERE BillId=(SELECT TOP 1 BillId FROM Bill ORDER BY BillDate DESC)
-	END
-GO
-
-CREATE TRIGGER tr_UpdateBill 
-ON BillDetail
-	FOR INSERT
-		AS
-			BEGIN
-				UPDATE Bill SET TotalPrice+=inserted.BillDetailPrice
-				FROM inserted
-				WHERE inserted.BillId=Bill.BillId
-			END
-GO
---DROP TRIGGER tr_UpdateBill
---INSERT INTO BillDetail VALUES('2185853', 'TRADIT', 1, N'S (Nhỏ)', N'Trân châu vàng', '50%', '50%', 25000)
-
-
---INSERT INTO BillDetail VALUES('10212350', 'TRADIT', 1, N'S (Nhỏ)', N'Trân châu vàng', '50%', '50%', 25000)
-
---DBCC CHECKIDENT(BillDetail, RESEED, 0)
-
-INSERT INTO BillDetail VALUES('1104822385', '1104822312', 'TRADIT', 1, N'S (Nhỏ)', N'Trân châu vàng', '50%', '50%', 25000)
-
+INSERT INTO Category VALUES ('ORG', N'Nguyên bản')
+INSERT INTO Category VALUES ('BIZ', N'Dị bản')
+INSERT INTO Category VALUES ('NOEL', N'Giáng sinh')
+INSERT INTO Drink VALUES ('TRADIT','ORG', N'Trà sữa Truyền thống',  20000)
+INSERT INTO Drink VALUES ('FMILK', 'ORG', N'Sữa tươi', 20000)
+INSERT INTO Drink VALUES ('THO', 'BIZ', N'Sữa Ông Thọ', 20000)
+INSERT INTO Drink VALUES ('LONGTH', 'BIZ', N'Sữa tươi Long Thành', 20000)
+INSERT INTO Drink VALUES ('FMILKBS', 'BIZ', N'Sữa tươi Trân châu đường đen', 20000)
